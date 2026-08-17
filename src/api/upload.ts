@@ -3,6 +3,7 @@ import client from './client';
 interface UploadResponse {
   coverImage?: string;
   fileUrl?: string;
+  fileType?: 'epub' | 'pdf';
 }
 
 export async function uploadFiles(files: {

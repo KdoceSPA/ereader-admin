@@ -16,6 +16,7 @@ export type Level =
 
 export type Role = 'admin' | 'content';
 export type Status = 'active' | 'inactive';
+export type FileType = 'epub' | 'pdf';
 
 export interface Book {
   id: number;
@@ -24,6 +25,7 @@ export interface Book {
   level: Level;
   coverImage: string | null;
   fileUrl: string;
+  fileType: FileType;
   status: Status;
   createdAt: string;
 }

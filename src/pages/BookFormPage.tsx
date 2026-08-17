@@ -71,6 +71,7 @@ export function BookFormPage() {
     setSubmitting(true);
     try {
       let fileUrl = existing?.fileUrl ?? '';
+      let fileType = existing?.fileType ?? 'epub';
       let coverImage = existing?.coverImage ?? undefined;
 
       if (epubFile || coverFile) {
@@ -79,22 +80,23 @@ export function BookFormPage() {
           cover: coverFile ?? undefined,
         });
         if (uploaded.fileUrl) fileUrl = uploaded.fileUrl;
+        if (uploaded.fileType) fileType = uploaded.fileType;
         if (uploaded.coverImage) coverImage = uploaded.coverImage;
       }
 
       if (!fileUrl && !isEdit) {
-        toast.error('El archivo EPUB es requerido');
+        toast.error('El archivo (EPUB o PDF) es requerido');
         return;
       }
 
       if (isEdit) {
         await updateBook.mutateAsync({
           id: bookId,
-          payload: { ...data, fileUrl, coverImage },
+          payload: { ...data, fileUrl, fileType, coverImage },
         });
         toast.success('Libro actualizado');
       } else {
-        await createBook.mutateAsync({ ...data, fileUrl, coverImage });
+        await createBook.mutateAsync({ ...data, fileUrl, fileType, coverImage });
         toast.success('Libro creado');
       }
       navigate('/books');
@@ -169,11 +171,11 @@ export function BookFormPage() {
             </div>
 
             <FileDropzone
-              label="Archivo EPUB"
-              accept=".epub"
+              label="Archivo del libro (EPUB o PDF)"
+              accept=".epub,.pdf"
               file={epubFile}
               onChange={setEpubFile}
-              hint={isEdit ? 'Dejar vacío para mantener el archivo actual' : 'Requerido (.epub)'}
+              hint={isEdit ? 'Dejar vacío para mantener el archivo actual' : 'Requerido (.epub o .pdf)'}
             />
 
             <FileDropzone
