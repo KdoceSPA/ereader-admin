@@ -17,6 +17,7 @@ export interface CreateBookPayload {
   level: string;
   coverImage?: string;
   fileUrl: string;
+  fileType?: string;
   status?: string;
 }
 
