@@ -23,11 +23,11 @@ export function FileDropzone({ label, accept, file, onChange, hint }: FileDropzo
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2 min-w-0">
       <p className="text-sm font-medium">{label}</p>
       <div
         className={cn(
-          'relative rounded-md border-2 border-dashed p-6 text-center transition-colors',
+          'relative rounded-md border-2 border-dashed p-6 text-center transition-colors min-w-0',
           dragging ? 'border-primary bg-primary/5' : 'border-muted-foreground/30'
         )}
         onDragOver={(e) => {
@@ -49,8 +49,8 @@ export function FileDropzone({ label, accept, file, onChange, hint }: FileDropzo
           }}
         />
         {file ? (
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-foreground truncate max-w-[80%]">{file.name}</span>
+          <div className="flex items-center justify-between gap-2 min-w-0">
+            <span className="text-sm text-foreground truncate min-w-0">{file.name}</span>
             <Button
               type="button"
               variant="ghost"

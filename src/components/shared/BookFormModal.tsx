@@ -147,7 +147,7 @@ export function BookFormModal({ open, onOpenChange, bookId, defaultLevel }: Book
           <DialogTitle>{isEdit ? 'Editar libro' : 'Nuevo libro'}</DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 min-w-0">
           <div className="space-y-2">
             <Label htmlFor="title">Título</Label>
             <Input id="title" {...register('title')} />
