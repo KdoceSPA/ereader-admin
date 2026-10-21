@@ -8,13 +8,15 @@ import { Separator } from '@/components/ui/separator';
 const navItems = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/books', label: 'Libros', icon: BookOpen },
-  { to: '/institutions', label: 'Instituciones', icon: Building2 },
-  { to: '/users', label: 'Usuarios', icon: Users },
+  { to: '/institutions', label: 'Instituciones', icon: Building2, adminOnly: true },
+  { to: '/users', label: 'Usuarios', icon: Users, adminOnly: true },
 ];
 
 export function Sidebar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+
+  const items = navItems.filter((item) => !item.adminOnly || user?.role === 'admin');
 
   function handleLogout() {
     logout();
@@ -29,7 +31,7 @@ export function Sidebar() {
       </div>
       <Separator className="bg-sidebar-border" />
       <nav className="flex-1 p-4 space-y-1">
-        {navItems.map(({ to, label, icon: Icon }) => (
+        {items.map(({ to, label, icon: Icon }) => (
           <NavLink
             key={to}
             to={to}

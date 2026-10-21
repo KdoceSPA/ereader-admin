@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Plus, Pencil, Trash2, BookOpen, FolderOpen, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAuth } from '@/hooks/useAuth';
 import { useBooks, useDeleteBook } from '@/hooks/useBooks';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -27,8 +28,10 @@ const LEVEL_ORDER: Level[] = [
 ];
 
 export function BooksPage() {
+  const { user } = useAuth();
   const { data: books, isLoading } = useBooks();
   const deleteBook = useDeleteBook();
+  const canDelete = user?.role === 'admin';
 
   const [selectedLevel, setSelectedLevel] = useState<Level | null>(null);
   const [deleteId, setDeleteId] = useState<number | null>(null);
@@ -121,14 +124,16 @@ export function BooksPage() {
                       <Button variant="ghost" size="icon" onClick={() => openEdit(book.id)}>
                         <Pencil className="h-4 w-4" />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setDeleteId(book.id)}
-                        className="text-destructive hover:text-destructive"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      {canDelete && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setDeleteId(book.id)}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
                     </div>
                   </td>
                 </tr>
