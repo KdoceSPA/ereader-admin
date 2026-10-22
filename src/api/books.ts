@@ -3,7 +3,7 @@ import type { Book } from '@/types/api';
 
 // Normaliza la respuesta por si el backend todavía no tiene la migración a
 // múltiples niveles desplegada (devuelve `level` singular en vez de `levels`).
-function normalizeBook(book: Book & { level?: string }): Book {
+export function normalizeBook(book: Book & { level?: string }): Book {
   if (Array.isArray(book.levels)) return book;
   const { level, ...rest } = book;
   return { ...rest, levels: level ? [level as Book['levels'][number]] : [] };

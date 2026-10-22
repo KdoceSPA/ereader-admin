@@ -1,5 +1,6 @@
 import client from './client';
 import type { Institution, Book } from '@/types/api';
+import { normalizeBook } from './books';
 
 export async function getInstitutions(): Promise<Institution[]> {
   const { data } = await client.get<Institution[]>('/api/institutions');
@@ -35,7 +36,7 @@ export async function deleteInstitution(id: number): Promise<void> {
 
 export async function getInstitutionBooks(id: number): Promise<Book[]> {
   const { data } = await client.get<Book[]>(`/api/institutions/${id}/books`);
-  return data;
+  return data.map(normalizeBook);
 }
 
 export async function assignBookToInstitution(
