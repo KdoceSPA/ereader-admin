@@ -110,7 +110,7 @@ export function DashboardPage() {
                     >
                       {book.title}
                     </Link>
-                    <p className="text-xs text-muted-foreground">{LEVEL_LABELS[book.level]}</p>
+                    <p className="text-xs text-muted-foreground">{book.levels.map((l) => LEVEL_LABELS[l]).join(", ")}</p>
                   </div>
                   <Badge variant={book.status === 'active' ? 'success' : 'secondary'}>
                     {book.status === 'active' ? 'Activo' : 'Inactivo'}

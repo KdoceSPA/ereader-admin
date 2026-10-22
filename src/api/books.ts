@@ -14,7 +14,7 @@ export async function getBook(id: number): Promise<Book> {
 export interface CreateBookPayload {
   title: string;
   description?: string;
-  level: string;
+  levels: string[];
   coverImage?: string;
   fileUrl: string;
   fileType?: string;
@@ -33,4 +33,8 @@ export async function updateBook(id: number, payload: Partial<CreateBookPayload>
 
 export async function deleteBook(id: number): Promise<void> {
   await client.delete(`/api/books/${id}`);
+}
+
+export async function removeBookLevel(id: number, level: string): Promise<void> {
+  await client.delete(`/api/books/${id}/levels/${level}`);
 }

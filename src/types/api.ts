@@ -22,12 +22,13 @@ export interface Book {
   id: number;
   title: string;
   description: string | null;
-  level: Level;
+  levels: Level[];
   coverImage: string | null;
   fileUrl: string;
   fileType: FileType;
   status: Status;
   createdAt: string;
+  createdByUserId: number | null;
 }
 
 export interface Institution {

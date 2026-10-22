@@ -94,7 +94,7 @@ export function InstitutionBooksPage() {
                     )}
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{book.title}</p>
-                      <p className="text-xs text-muted-foreground">{LEVEL_LABELS[book.level]}</p>
+                      <p className="text-xs text-muted-foreground">{book.levels.map((l) => LEVEL_LABELS[l]).join(", ")}</p>
                     </div>
                     <Button
                       variant="ghost"
@@ -147,7 +147,7 @@ export function InstitutionBooksPage() {
                     )}
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{book.title}</p>
-                      <p className="text-xs text-muted-foreground">{LEVEL_LABELS[book.level]}</p>
+                      <p className="text-xs text-muted-foreground">{book.levels.map((l) => LEVEL_LABELS[l]).join(", ")}</p>
                     </div>
                     <Badge variant="secondary" className="text-xs flex-shrink-0">
                       {book.status === 'active' ? 'Activo' : 'Inactivo'}

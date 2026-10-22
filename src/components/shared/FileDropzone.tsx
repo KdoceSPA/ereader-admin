@@ -27,7 +27,7 @@ export function FileDropzone({ label, accept, file, onChange, hint }: FileDropzo
       <p className="text-sm font-medium">{label}</p>
       <div
         className={cn(
-          'relative rounded-md border-2 border-dashed p-6 text-center transition-colors min-w-0',
+          'relative rounded-md border-2 border-dashed p-4 text-center transition-colors min-w-0',
           dragging ? 'border-primary bg-primary/5' : 'border-muted-foreground/30'
         )}
         onDragOver={(e) => {
@@ -64,8 +64,8 @@ export function FileDropzone({ label, accept, file, onChange, hint }: FileDropzo
             </Button>
           </div>
         ) : (
-          <div className="flex flex-col items-center gap-2 text-muted-foreground cursor-pointer">
-            <Upload className="h-8 w-8" />
+          <div className="flex flex-col items-center gap-1 text-muted-foreground cursor-pointer">
+            <Upload className="h-6 w-6" />
             <p className="text-sm">Arrastra un archivo o haz clic para seleccionar</p>
             {hint && <p className="text-xs">{hint}</p>}
           </div>

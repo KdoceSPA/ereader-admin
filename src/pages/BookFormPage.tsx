@@ -19,12 +19,13 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { FileDropzone } from '@/components/shared/FileDropzone';
-import { LEVEL_LABELS, type Level } from '@/types/api';
+import { LevelMultiSelect } from '@/components/shared/LevelMultiSelect';
+import type { Level } from '@/types/api';
 
 const schema = z.object({
   title: z.string().min(1, 'Título requerido'),
   description: z.string().optional(),
-  level: z.string().min(1, 'Nivel requerido'),
+  levels: z.array(z.string()).min(1, 'Selecciona al menos un nivel'),
   status: z.enum(['active', 'inactive']),
 });
 
@@ -53,7 +54,7 @@ export function BookFormPage() {
     formState: { errors },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { status: 'active' },
+    defaultValues: { status: 'active', levels: [] },
   });
 
   useEffect(() => {
@@ -61,7 +62,7 @@ export function BookFormPage() {
       reset({
         title: existing.title,
         description: existing.description ?? '',
-        level: existing.level,
+        levels: existing.levels,
         status: existing.status,
       });
     }
@@ -107,7 +108,6 @@ export function BookFormPage() {
     }
   }
 
-  const levelValue = watch('level');
   const statusValue = watch('status');
 
   return (
@@ -140,22 +140,11 @@ export function BookFormPage() {
               <Input id="description" {...register('description')} />
             </div>
 
-            <div className="space-y-2">
-              <Label>Nivel</Label>
-              <Select value={levelValue} onValueChange={(v) => setValue('level', v)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecciona un nivel" />
-                </SelectTrigger>
-                <SelectContent>
-                  {(Object.keys(LEVEL_LABELS) as Level[]).map((level) => (
-                    <SelectItem key={level} value={level}>
-                      {LEVEL_LABELS[level]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {errors.level && <p className="text-xs text-destructive">{errors.level.message}</p>}
-            </div>
+            <LevelMultiSelect
+              value={(watch('levels') ?? []) as Level[]}
+              onChange={(levels) => setValue('levels', levels)}
+              error={errors.levels?.message as string | undefined}
+            />
 
             <div className="space-y-2">
               <Label>Estado</Label>

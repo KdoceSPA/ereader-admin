@@ -2,36 +2,24 @@ import { useState } from 'react';
 import { Plus, Pencil, Trash2, BookOpen, FolderOpen, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
-import { useBooks, useDeleteBook } from '@/hooks/useBooks';
+import { useBooks, useDeleteBook, useRemoveBookLevel } from '@/hooks/useBooks';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { BookFormModal } from '@/components/shared/BookFormModal';
+import { LEVEL_ORDER } from '@/components/shared/LevelMultiSelect';
 import { LEVEL_LABELS, type Level } from '@/types/api';
-
-const LEVEL_ORDER: Level[] = [
-  'prekinder',
-  'kinder',
-  'primero_basico',
-  'segundo_basico',
-  'tercero_basico',
-  'cuarto_basico',
-  'quinto_basico',
-  'sexto_basico',
-  'septimo_basico',
-  'octavo_basico',
-  'primero_medio',
-  'segundo_medio',
-  'tercero_medio',
-  'cuarto_medio',
-];
 
 export function BooksPage() {
   const { user } = useAuth();
   const { data: books, isLoading } = useBooks();
   const deleteBook = useDeleteBook();
-  const canDelete = user?.role === 'admin';
+  const removeBookLevel = useRemoveBookLevel();
+  function canEditOrDelete(book: { createdByUserId: number | null }) {
+    if (user?.role === 'admin') return true;
+    return user?.role === 'content' && book.createdByUserId === user.id;
+  }
 
   const [selectedLevel, setSelectedLevel] = useState<Level | null>(null);
   const [deleteId, setDeleteId] = useState<number | null>(null);
@@ -48,11 +36,21 @@ export function BooksPage() {
     setModalOpen(true);
   }
 
+  const deleteTargetBook = selectedLevel
+    ? books?.find((b) => b.id === deleteId)
+    : undefined;
+  const willDeleteWholeBook = !selectedLevel || deleteTargetBook?.levels.length === 1;
+
   async function handleDelete() {
     if (!deleteId) return;
     try {
-      await deleteBook.mutateAsync(deleteId);
-      toast.success('Libro eliminado');
+      if (selectedLevel && !willDeleteWholeBook) {
+        await removeBookLevel.mutateAsync({ id: deleteId, level: selectedLevel });
+        toast.success('Libro quitado de este nivel');
+      } else {
+        await deleteBook.mutateAsync(deleteId);
+        toast.success('Libro eliminado');
+      }
     } catch {
       toast.error('Error al eliminar el libro');
     } finally {
@@ -61,10 +59,10 @@ export function BooksPage() {
   }
 
   const availableLevels = LEVEL_ORDER.filter((level) =>
-    books?.some((b) => b.level === level)
+    books?.some((b) => b.levels.includes(level))
   );
 
-  const levelBooks = selectedLevel ? books?.filter((b) => b.level === selectedLevel) : [];
+  const levelBooks = selectedLevel ? books?.filter((b) => b.levels.includes(selectedLevel)) : [];
 
   if (selectedLevel) {
     return (
@@ -121,10 +119,12 @@ export function BooksPage() {
                   </td>
                   <td className="p-4">
                     <div className="flex items-center justify-end gap-2">
-                      <Button variant="ghost" size="icon" onClick={() => openEdit(book.id)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      {canDelete && (
+                      {canEditOrDelete(book) && (
+                        <Button variant="ghost" size="icon" onClick={() => openEdit(book.id)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {canEditOrDelete(book) && (
                         <Button
                           variant="ghost"
                           size="icon"
@@ -159,10 +159,14 @@ export function BooksPage() {
         <ConfirmDialog
           open={deleteId !== null}
           onOpenChange={(open) => !open && setDeleteId(null)}
-          title="Eliminar libro"
-          description="Esta acción no se puede deshacer. El libro será eliminado permanentemente."
+          title={willDeleteWholeBook ? 'Eliminar libro' : `Quitar de ${LEVEL_LABELS[selectedLevel]}`}
+          description={
+            willDeleteWholeBook
+              ? 'Esta acción no se puede deshacer. El libro será eliminado permanentemente de todos los niveles.'
+              : `El libro dejará de aparecer en ${LEVEL_LABELS[selectedLevel]}, pero seguirá disponible en sus otros niveles asociados.`
+          }
           onConfirm={handleDelete}
-          loading={deleteBook.isPending}
+          loading={deleteBook.isPending || removeBookLevel.isPending}
         />
       </div>
     );
@@ -194,7 +198,7 @@ export function BooksPage() {
       ) : (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
           {availableLevels.map((level) => {
-            const count = books?.filter((b) => b.level === level).length ?? 0;
+            const count = books?.filter((b) => b.levels.includes(level)).length ?? 0;
             return (
               <button
                 key={level}

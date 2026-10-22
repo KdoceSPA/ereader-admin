@@ -5,6 +5,7 @@ import {
   createBook,
   updateBook,
   deleteBook,
+  removeBookLevel,
   type CreateBookPayload,
 } from '@/api/books';
 
@@ -40,6 +41,14 @@ export function useDeleteBook() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: number) => deleteBook(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['books'] }),
+  });
+}
+
+export function useRemoveBookLevel() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, level }: { id: number; level: string }) => removeBookLevel(id, level),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['books'] }),
   });
 }
