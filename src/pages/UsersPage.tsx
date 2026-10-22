@@ -1,12 +1,13 @@
-import { useState } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getUsers, createUser, deleteUser } from '@/api/users';
+import { getUsers, createUser, updateUser, deleteUser } from '@/api/users';
 import { useInstitutions } from '@/hooks/useInstitutions';
+import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -27,25 +28,38 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
+import type { User } from '@/types/api';
 
-const schema = z.object({
+const createSchema = z.object({
   email: z.string().email('Email inválido'),
   password: z.string().min(6, 'Mínimo 6 caracteres'),
   role: z.enum(['admin', 'content']),
   institutionId: z.string().optional(),
 });
 
-type FormData = z.infer<typeof schema>;
+const editSchema = z.object({
+  email: z.string().email('Email inválido'),
+  password: z.string().min(6, 'Mínimo 6 caracteres').optional().or(z.literal('')),
+  role: z.enum(['admin', 'content']),
+  institutionId: z.string().optional(),
+});
+
+type CreateFormData = z.infer<typeof createSchema>;
+type EditFormData = z.infer<typeof editSchema>;
 
 export function UsersPage() {
   const qc = useQueryClient();
+  const { user: currentUser } = useAuth();
+  const isAdmin = currentUser?.role === 'admin';
+
   const { data: users, isLoading } = useQuery({ queryKey: ['users'], queryFn: getUsers });
   const { data: institutions } = useInstitutions();
   const [createOpen, setCreateOpen] = useState(false);
+  const [editUser, setEditUser] = useState<User | null>(null);
   const [deleteId, setDeleteId] = useState<number | null>(null);
 
   const createMutation = useMutation({
-    mutationFn: (data: FormData) =>
+    mutationFn: (data: CreateFormData) =>
       createUser({
         email: data.email,
         password: data.password,
@@ -56,9 +70,26 @@ export function UsersPage() {
       qc.invalidateQueries({ queryKey: ['users'] });
       toast.success('Usuario creado');
       setCreateOpen(false);
-      reset();
+      createForm.reset();
     },
     onError: () => toast.error('Error al crear usuario'),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: (data: EditFormData & { id: number }) =>
+      updateUser(data.id, {
+        email: data.email,
+        ...(data.password ? { password: data.password } : {}),
+        ...(isAdmin
+          ? { role: data.role, institutionId: data.institutionId ? Number(data.institutionId) : null }
+          : {}),
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['users'] });
+      toast.success('Usuario actualizado');
+      setEditUser(null);
+    },
+    onError: () => toast.error('Error al actualizar usuario'),
   });
 
   const deleteMutation = useMutation({
@@ -71,23 +102,43 @@ export function UsersPage() {
     onError: () => toast.error('Error al eliminar usuario'),
   });
 
-  const {
-    register,
-    handleSubmit,
-    setValue,
-    watch,
-    reset,
-    formState: { errors, isSubmitting },
-  } = useForm<FormData>({
-    resolver: zodResolver(schema),
+  const createForm = useForm<CreateFormData>({
+    resolver: zodResolver(createSchema),
     defaultValues: { role: 'content' },
   });
 
-  const roleValue = watch('role');
-  const institutionValue = watch('institutionId');
+  const editForm = useForm<EditFormData>({
+    resolver: zodResolver(editSchema),
+  });
 
-  async function onSubmit(data: FormData) {
+  useEffect(() => {
+    if (editUser) {
+      editForm.reset({
+        email: editUser.email,
+        password: '',
+        role: editUser.role,
+        institutionId: editUser.institutionId ? String(editUser.institutionId) : undefined,
+      });
+    }
+  }, [editUser, editForm]);
+
+  const createRoleValue = createForm.watch('role');
+  const createInstitutionValue = createForm.watch('institutionId');
+  const editRoleValue = editForm.watch('role');
+  const editInstitutionValue = editForm.watch('institutionId');
+
+  async function onCreateSubmit(data: CreateFormData) {
     await createMutation.mutateAsync(data);
+  }
+
+  async function onEditSubmit(data: EditFormData) {
+    if (!editUser) return;
+    await updateMutation.mutateAsync({ ...data, id: editUser.id });
+  }
+
+  function canManage(target: User) {
+    if (isAdmin) return true;
+    return target.id !== currentUser?.id && target.role === 'content';
   }
 
   return (
@@ -150,15 +201,22 @@ export function UsersPage() {
                         {new Date(user.createdAt).toLocaleDateString('es-CL')}
                       </td>
                       <td className="p-4">
-                        <div className="flex justify-end">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setDeleteId(user.id)}
-                            className="text-destructive hover:text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                        <div className="flex justify-end gap-2">
+                          {canManage(user) && (
+                            <Button variant="ghost" size="icon" onClick={() => setEditUser(user)}>
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {canManage(user) && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => setDeleteId(user.id)}
+                              className="text-destructive hover:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -180,60 +238,139 @@ export function UsersPage() {
           <DialogHeader>
             <DialogTitle>Crear usuario</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={createForm.handleSubmit(onCreateSubmit)} className="space-y-4 min-w-0">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" {...register('email')} />
-              {errors.email && (
-                <p className="text-xs text-destructive">{errors.email.message}</p>
+              <Input id="email" type="email" {...createForm.register('email')} />
+              {createForm.formState.errors.email && (
+                <p className="text-xs text-destructive">{createForm.formState.errors.email.message}</p>
               )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Contraseña</Label>
-              <Input id="password" type="password" {...register('password')} />
-              {errors.password && (
-                <p className="text-xs text-destructive">{errors.password.message}</p>
+              <Input id="password" type="password" {...createForm.register('password')} />
+              {createForm.formState.errors.password && (
+                <p className="text-xs text-destructive">{createForm.formState.errors.password.message}</p>
               )}
             </div>
-            <div className="space-y-2">
-              <Label>Rol</Label>
-              <Select
-                value={roleValue}
-                onValueChange={(v) => setValue('role', v as 'admin' | 'content')}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="content">Content</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Institución (opcional)</Label>
-              <Select
-                value={institutionValue ?? ''}
-                onValueChange={(v) => setValue('institutionId', v || undefined)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Sin institución" />
-                </SelectTrigger>
-                <SelectContent>
-                  {institutions?.map((inst) => (
-                    <SelectItem key={inst.id} value={String(inst.id)}>
-                      {inst.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {isAdmin && (
+              <>
+                <div className="space-y-2">
+                  <Label>Rol</Label>
+                  <Select
+                    value={createRoleValue}
+                    onValueChange={(v) => createForm.setValue('role', v as 'admin' | 'content')}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="content">Content</SelectItem>
+                      <SelectItem value="admin">Admin</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Institución (opcional)</Label>
+                  <Select
+                    value={createInstitutionValue ?? ''}
+                    onValueChange={(v) => createForm.setValue('institutionId', v || undefined)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sin institución" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {institutions?.map((inst) => (
+                        <SelectItem key={inst.id} value={String(inst.id)}>
+                          {inst.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </>
+            )}
+            {!isAdmin && (
+              <p className="text-sm text-muted-foreground">
+                El usuario quedará creado con rol Content en tu institución.
+              </p>
+            )}
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>
                 Cancelar
               </Button>
-              <Button type="submit" disabled={isSubmitting || createMutation.isPending}>
+              <Button type="submit" disabled={createForm.formState.isSubmitting || createMutation.isPending}>
                 {createMutation.isPending ? 'Creando...' : 'Crear usuario'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!editUser} onOpenChange={(open) => !open && setEditUser(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar usuario</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="space-y-4 min-w-0">
+            <div className="space-y-2">
+              <Label htmlFor="edit-email">Email</Label>
+              <Input id="edit-email" type="email" {...editForm.register('email')} />
+              {editForm.formState.errors.email && (
+                <p className="text-xs text-destructive">{editForm.formState.errors.email.message}</p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-password">Nueva contraseña</Label>
+              <Input id="edit-password" type="password" {...editForm.register('password')} />
+              <p className="text-xs text-muted-foreground">Dejar vacío para mantener la actual</p>
+              {editForm.formState.errors.password && (
+                <p className="text-xs text-destructive">{editForm.formState.errors.password.message}</p>
+              )}
+            </div>
+            {isAdmin && (
+              <>
+                <div className="space-y-2">
+                  <Label>Rol</Label>
+                  <Select
+                    value={editRoleValue}
+                    onValueChange={(v) => editForm.setValue('role', v as 'admin' | 'content')}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="content">Content</SelectItem>
+                      <SelectItem value="admin">Admin</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Institución (opcional)</Label>
+                  <Select
+                    value={editInstitutionValue ?? ''}
+                    onValueChange={(v) => editForm.setValue('institutionId', v || undefined)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sin institución" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {institutions?.map((inst) => (
+                        <SelectItem key={inst.id} value={String(inst.id)}>
+                          {inst.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </>
+            )}
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setEditUser(null)}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={editForm.formState.isSubmitting || updateMutation.isPending}>
+                {updateMutation.isPending ? 'Guardando...' : 'Guardar cambios'}
               </Button>
             </DialogFooter>
           </form>

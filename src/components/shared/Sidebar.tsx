@@ -9,7 +9,7 @@ const navItems = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/books', label: 'Libros', icon: BookOpen },
   { to: '/institutions', label: 'Instituciones', icon: Building2, adminOnly: true },
-  { to: '/users', label: 'Usuarios', icon: Users, adminOnly: true },
+  { to: '/users', label: 'Usuarios', icon: Users },
 ];
 
 export function Sidebar() {

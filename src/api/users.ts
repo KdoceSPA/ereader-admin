@@ -18,6 +18,18 @@ export async function createUser(payload: CreateUserPayload): Promise<User> {
   return data;
 }
 
+export interface UpdateUserPayload {
+  email?: string;
+  password?: string;
+  role?: string;
+  institutionId?: number | null;
+}
+
+export async function updateUser(id: number, payload: UpdateUserPayload): Promise<User> {
+  const { data } = await client.put<User>(`/api/users/${id}`, payload);
+  return data;
+}
+
 export async function deleteUser(id: number): Promise<void> {
   await client.delete(`/api/users/${id}`);
 }
